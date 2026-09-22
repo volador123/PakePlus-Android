@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>计算器</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+
+  :root {
+    --page-bg: #d6d6d6;
+    --bg: #f3f3f3;
+    --text: #1b1b1b;
+    --muted: #6b6b6b;
+    --btn: #fbfbfb;
+    --btn-hover: #f0f0f0;
+    --btn-active: #e6e6e6;
+    --btn-num: #fdfdfd;
+    --accent: #0067c0;
+    --accent-hover: #1a76c8;
+    --accent-active: #005ba1;
+    --accent-text: #ffffff;
+    --shadow: rgba(0,0,0,.25);
+    --head-bg: #f3f3f3;
+  }
+  body.dark {
+    --page-bg: #121212;
+    --bg: #202020;
+    --text: #ffffff;
+    --muted: #a8a8a8;
+    --btn: #323232;
+    --btn-hover: #3d3d3d;
+    --btn-active: #2a2a2a;
+    --btn-num: #3b3b3b;
+    --accent: #4cc2ff;
+    --accent-hover: #62caff;
+    --accent-active: #3ab0ef;
+    --accent-text: #001a26;
+    --shadow: rgba(0,0,0,.6);
+    --head-bg: #202020;
+  }
+
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei UI", "Microsoft YaHei", system-ui, -apple-system, sans-serif;
+    background: var(--page-bg);
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow: hidden;
+    transition: background .2s;
+  }
+
+  .app {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    background: var(--bg);
+    border-radius: 8px;
+    box-shadow: 0 12px 44px var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: background .2s;
+  }
+
+  @media (max-width: 440px), (max-height: 760px) {
+    .app { width: 100vw; height: 100vh; border-radius: 0; box-shadow: none; }
+  }
+
+  /* ---------- 标题栏 ---------- */
+  .titlebar {
+    height: 46px;
+    flex: 0 0 46px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 10px 0 18px;
+  }
+  .title {
+    font-size: 14px;
+    color: var(--muted);
+    letter-spacing: .3px;
+  }
+  .title .build {
+    margin-left: 8px;
+    font-size: 11px;
+    opacity: .5;
+  }
+  .tb-btns { display: flex; gap: 4px; }
+  .tb-btn {
+    width: 38px; height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .1s;
+  }
+  .tb-btn:hover { background: var(--btn-hover); }
+  .tb-btn:active { background: var(--btn-active); }
+
+  /* ---------- 显示屏 ---------- */
+  .display {
+    flex: 1 1 auto;
+    min-height: 120px;
+    padding: 0 20px 14px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: flex-end;
+    overflow: hidden;
+  }
+  .expr {
+    font-size: 15px;
+    color: var(--muted);
+    height: 22px;
+    line-height: 22px;
+    margin-bottom: 8px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    direction: ltr;
+  }
+  .value {
+    font-size: 56px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -.5px;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    transition: font-size .08s;
+  }
+
+  /* ---------- 内存行 ---------- */
+  .mem-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 3px;
+    padding: 0 5px 3px;
+  }
+  .mem-row button {
+    height: 36px;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 14px;
+    border-radius: 5px;
+    cursor: pointer;
+  }
+  .mem-row button:hover:not(:disabled) { background: var(--btn-hover); }
+  .mem-row button:active:not(:disabled) { background: var(--btn-active); }
+  .mem-row button:disabled { opacity: .32; cursor: default; }
+
+  /* ---------- 键盘区 ---------- */
+  .pad {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 3px;
+    padding: 0 5px 5px;
+    flex: 0 0 auto;
+  }
+  .btn {
+    height: 58px;
+    border: none;
+    border-radius: 6px;
+    background: var(--btn);
+    color: var(--text);
+    font-family: inherit;
+    font-size: 18px;
+    font-weight: 400;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .08s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .btn:hover { background: var(--btn-hover); }
+  .btn:active { background: var(--btn-active); }
+  .btn.num { background: var(--btn-num); font-size: 26px; font-weight: 400; }
+  .btn.num:hover { background: var(--btn-hover); }
+  .btn.op { font-size: 24px; }
+  .btn.eq {
+    background: var(--accent);
+    color: var(--accent-text);
+    font-size: 26px;
+  }
+  .btn.eq:hover { background: var(--accent-hover); }
+  .btn.eq:active { background: var(--accent-active); }
+  .btn sup { font-size: 13px; }
+  .btn small { font-size: 14px; margin-right: 2px; }
+
+  /* ---------- 历史面板 ---------- */
+  .history {
+    position: absolute;
+    inset: 0;
+    background: var(--bg);
+    display: none;
+    flex-direction: column;
+    z-index: 20;
+  }
+  .history.open { display: flex; }
+  .history-head {
+    height: 50px;
+    flex: 0 0 50px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 6px 0 18px;
+    font-size: 16px;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(128,128,128,.2);
+  }
+  .history-head .tb-btns { display: flex; gap: 4px; }
+  .history-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 10px 14px;
+  }
+  .h-item {
+    padding: 10px 10px;
+    border-radius: 6px;
+    text-align: right;
+    cursor: pointer;
+    margin-bottom: 2px;
+  }
+  .h-item:hover { background: var(--btn-hover); }
+  .h-expr { font-size: 14px; color: var(--muted); margin-bottom: 5px; word-break: break-all; }
+  .h-res { font-size: 24px; font-weight: 600; word-break: break-all; }
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 15px;
+    padding-top: 70px;
+  }
+
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-thumb { background: rgba(128,128,128,.35); border-radius: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+
+  <!-- 标题栏 -->
+  <div class="titlebar">
+    <span class="title">标准<span class="build" id="buildTag">构建 v4 / 10:55</span></span>
+    <div class="tb-btns">
+      <button class="tb-btn" data-act="toggleHistory" title="历史记录">🕘</button>
+      <button class="tb-btn" data-act="theme" id="themeBtn" title="切换主题">🌙</button>
+    </div>
+  </div>
+
+  <!-- 显示屏 -->
+  <div class="display">
+    <div class="expr" id="expr"></div>
+    <div class="value" id="value">0</div>
+  </div>
+
+  <!-- 内存行 -->
+  <div class="mem-row">
+    <button data-act="mc" id="mcBtn">MC</button>
+    <button data-act="mr" id="mrBtn">MR</button>
+    <button data-act="mplus">M+</button>
+    <button data-act="mminus">M−</button>
+    <button data-act="ms">MS</button>
+  </div>
+
+  <!-- 键盘 -->
+  <div class="pad">
+    <button class="btn" data-act="percent">%</button>
+    <button class="btn" data-act="ce">CE</button>
+    <button class="btn" data-act="clear">C</button>
+    <button class="btn" data-act="back" style="font-size:24px">⌫</button>
+
+    <button class="btn" data-act="recip"><small>1</small>⁄x</button>
+    <button class="btn" data-act="sqr">x<sup>2</sup></button>
+    <button class="btn" data-act="sqrt"><small>2</small>√x</button>
+    <button class="btn op" data-op="÷">÷</button>
+
+    <button class="btn num" data-num="7">7</button>
+    <button class="btn num" data-num="8">8</button>
+    <button class="btn num" data-num="9">9</button>
+    <button class="btn op" data-op="×">×</button>
+
+    <button class="btn num" data-num="4">4</button>
+    <button class="btn num" data-num="5">5</button>
+    <button class="btn num" data-num="6">6</button>
+    <button class="btn op" data-op="-">−</button>
+
+    <button class="btn num" data-num="1">1</button>
+    <button class="btn num" data-num="2">2</button>
+    <button class="btn num" data-num="3">3</button>
+    <button class="btn op" data-op="+">+</button>
+
+    <button class="btn" data-act="negate">±</button>
+    <button class="btn num" data-num="0">0</button>
+    <button class="btn num" data-act="dot">.</button>
+    <button class="btn eq" data-act="equals">=</button>
+  </div>
+
+  <!-- 历史记录面板 -->
+  <div class="history" id="historyPanel">
+    <div class="history-head">
+      <span>历史记录</span>
+      <div class="tb-btns">
+        <button class="tb-btn" data-act="clearHistory" title="清除全部">🗑</button>
+        <button class="tb-btn" data-act="closeHistory" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ================= 状态 ================= */
+  let tokens = [];               // 已确认的表达式：[12, '+', 5, '×', ...]
+  let displayValue = '0';        // 当前显示的数字字符串
+  let waitingForOperand = false; // 刚按下运算符，等待新数字
+  let justEvaluated = false;     // 刚按过等号
+  let lastExpression = '';       // 等号后的表达式回显
+  let errorState = false;
+  let lastOp = null, lastOperand = null;
+  let entryLocked = false;      // 内存键录入后，下一个数字开启新条目
+  let memory = 0, hasMemory = false;
+  let history = [];
+
+  /* ================= DOM ================= */
+  const app = document.getElementById('app');
+  const valueEl = document.getElementById('value');
+  const exprEl = document.getElementById('expr');
+  const historyPanel = document.getElementById('historyPanel');
+  const historyList = document.getElementById('historyList');
+  const mcBtn = document.getElementById('mcBtn');
+  const mrBtn = document.getElementById('mrBtn');
+  const themeBtn = document.getElementById('themeBtn');
+
+  /* ================= 数字格式化 ================= */
+  function formatNumber(n) {
+    if (typeof n !== 'number' || Number.isNaN(n)) return '无效输入';
+    if (!isFinite(n)) return '不能除以零';
+    if (Object.is(n, -0)) n = 0;
+    let s = n.toString();
+    if (s.includes('e') || s.includes('E')) return s;
+    if (s.replace(/[-.]/g, '').length > 15) {
+      s = parseFloat(n.toPrecision(15)).toString();
+    }
+    return s;
+  }
+
+  function formatDisplay(s) {
+    s = String(s);
+    if (!/^-?\d/.test(s)) return s;
+    if (s.includes('e') || s.includes('E')) return s;
+    const neg = s.startsWith('-');
+    const body = neg ? s.slice(1) : s;
+    const dot = body.indexOf('.');
+    const intPart = dot === -1 ? body : body.slice(0, dot);
+    const decPart = dot === -1 ? null : body.slice(dot + 1);
+    const grouped = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return (neg ? '-' : '') + grouped + (decPart !== null ? '.' + decPart : '');
+  }
+
+  /* ================= 计算核心 ================= */
+  function applyOp(a, op, b) {
+    switch (op) {
+      case '+': return a + b;
+      case '-': return a - b;
+      case '×': return a * b;
+      case '÷': return b === 0 ? null : a / b;
+    }
+    return b;
+  }
+
+  // 标准优先级求值：先乘除，后加减
+  function evaluate(arr) {
+    const nums = [arr[0]];
+    const ops = [];
+    for (let i = 1; i < arr.length - 1; i += 2) {
+      ops.push(arr[i]);
+      nums.push(arr[i + 1]);
+    }
+
+    let i = 0;
+    while (i < ops.length) {
+      if (ops[i] === '×' || ops[i] === '÷') {
+        const r = applyOp(nums[i], ops[i], nums[i + 1]);
+        if (r === null) return null;
+        nums.splice(i, 2, r);
+        ops.splice(i, 1);
+      } else {
+        i++;
+      }
+    }
+
+    let acc = nums[0];
+    for (let j = 0; j < ops.length; j++) {
+      acc = applyOp(acc, ops[j], nums[j + 1]);
+    }
+    return acc;
+  }
+
+  /* ================= 渲染 ================= */
+  function update() {
+    if (errorState) {
+      valueEl.textContent = displayValue;
+      valueEl.style.fontSize = '32px';
+      exprEl.textContent = '';
+      return;
+    }
+
+    const text = formatDisplay(displayValue);
+    valueEl.textContent = text;
+
+    // 长数字自动缩小字号
+    const len = text.length;
+    let size = 56;
+    if (len > 11) size = Math.max(21, 56 - (len - 11) * 3.4);
+    valueEl.style.fontSize = size + 'px';
+
+    // 表达式行
+    if (lastExpression) {
+      exprEl.textContent = lastExpression;
+    } else {
+      const parts = [];
+      for (const t of tokens) {
+        parts.push(typeof t === 'number' ? formatDisplay(formatNumber(t)) : t);
+      }
+      if (!waitingForOperand) parts.push(formatDisplay(displayValue));
+      exprEl.textContent = parts.join(' ');
+    }
+  }
+
+  function updateMemButtons() {
+    mcBtn.disabled = !hasMemory;
+    mrBtn.disabled = !hasMemory;
+  }
+
+  function showError(msg) {
+    tokens = [];
+    waitingForOperand = false;
+    justEvaluated = false;
+    lastExpression = '';
+    lastOp = null;
+    lastOperand = null;
+    displayValue = msg;
+    errorState = true;
+    update();
+  }
+
+  /* ================= 按键行为 ================= */
+  function inputDigit(d) {
+    if (errorState) clearAll();
+    if (justEvaluated) hardReset();
+
+    if (waitingForOperand || entryLocked) {
+      displayValue = d;
+      waitingForOperand = false;
+      entryLocked = false;
+    } else {
+      const digits = displayValue.replace(/[-.]/g, '').length;
+      if (digits >= 16) return;
+      if (displayValue === '0') displayValue = d;
+      else if (displayValue === '-0') displayValue = '-' + d;
+      else displayValue += d;
+    }
+    update();
+  }
+
+  function inputDot() {
+    if (errorState) clearAll();
+    if (justEvaluated) hardReset();
+
+    if (waitingForOperand || entryLocked) {
+      displayValue = '0.';
+      waitingForOperand = false;
+      entryLocked = false;
+    } else if (!displayValue.includes('.')) {
+      displayValue += '.';
+    }
+    update();
+  }
+
+  function chooseOperator(op) {
+    if (errorState) return;
+
+    const current = parseFloat(displayValue) || 0;
+    lastExpression = '';
+    justEvaluated = false;
+    lastOp = null;
+    lastOperand = null;
+    entryLocked = false;
+
+    if (tokens.length === 0) {
+      tokens = [current, op];
+    } else if (waitingForOperand) {
+      tokens[tokens.length - 1] = op;   // 替换刚按下的运算符
+    } else {
+      tokens = tokens.concat([current, op]); // 累积表达式，不在此处求值
+    }
+    waitingForOperand = true;
+    update();
+  }
+
+  function equals() {
+    if (errorState) return;
+
+    // 没有待处理的运算
+    if (tokens.length === 0) {
+      if (lastOp !== null && lastOperand !== null && justEvaluated) {
+        const cur = parseFloat(displayValue) || 0;
+        const r = applyOp(cur, lastOp, lastOperand);
+        if (r === null) { showError('不能除以零'); return; }
+        const exprStr = formatDisplay(displayValue) + ' ' + lastOp + ' ' +
+                        formatDisplay(formatNumber(lastOperand)) + ' =';
+        pushHistory(exprStr, formatNumber(r));
+        displayValue = formatNumber(r);
+        lastExpression = exprStr;
+        update();
+      }
+      return;
+    }
+
+    let current;
+    if (waitingForOperand) {
+      current = tokens[tokens.length - 2];   // 例如 5 + =  →  5 + 5
+    } else {
+      current = parseFloat(displayValue) || 0;
+    }
+
+    const exprTokens = tokens.concat([current]);
+    const exprStr = exprTokens
+      .map(t => typeof t === 'number' ? formatDisplay(formatNumber(t)) : t)
+      .join(' ') + ' =';
+
+    const result = evaluate(exprTokens);
+    if (result === null) { showError('不能除以零'); return; }
+
+    lastOp = tokens[tokens.length - 1];
+    lastOperand = current;
+
+    pushHistory(exprStr, formatNumber(result));
+
+    displayValue = formatNumber(result);
+    lastExpression = exprStr;
+    tokens = [];
+    waitingForOperand = false;
+    justEvaluated = true;
+    update();
+  }
+
+  function unary(type) {
+    if (errorState) return;
+    const val = parseFloat(displayValue) || 0;
+
+    if (type === 'negate') {
+      if (waitingForOperand) {
+        displayValue = '-0';
+        waitingForOperand = false;
+      } else if (displayValue.startsWith('-')) {
+        displayValue = displayValue.slice(1);
+      } else {
+        displayValue = displayValue === '0' ? '-0' : '-' + displayValue;
+      }
+      entryLocked = false;
+      lastExpression = '';
+      justEvaluated = false;
+      update();
+      return;
+    }
+
+    let result;
+    switch (type) {
+      case 'percent':
+        if (tokens.length >= 2) {
+          const op = tokens[tokens.length - 1];
+          const base = tokens[tokens.length - 2];
+          // 乘除语境存为小数位的操作数，避免等号重复换算；加减语境按 Windows 习惯取基数的百分比
+          result = (op === '×' || op === '÷') ? val / 100 : base * val / 100;
+        } else {
+          result = val / 100;
+        }
+        break;
+      case 'recip':
+        if (val === 0) { showError('不能除以零'); return; }
+        result = 1 / val;
+        break;
+      case 'sqr':
+        result = val * val;
+        break;
+      case 'sqrt':
+        if (val < 0) { showError('无效输入'); return; }
+        result = Math.sqrt(val);
+        break;
+      default:
+        return;
+    }
+
+    displayValue = formatNumber(result);
+    lastExpression = '';
+    justEvaluated = false;
+    waitingForOperand = false;
+    update();
+  }
+
+  function backspace() {
+    if (errorState) { clearAll(); return; }
+    if (justEvaluated) { hardReset(); update(); return; }
+    if (waitingForOperand) return;
+
+    if (displayValue.length <= 1 ||
+        (displayValue.length === 2 && displayValue.startsWith('-'))) {
+      displayValue = '0';
+    } else {
+      displayValue = displayValue.slice(0, -1);
+      if (displayValue === '-' || displayValue === '') displayValue = '0';
+    }
+    update();
+  }
+
+  function hardReset() {
+    tokens = [];
+    displayValue = '0';
+    waitingForOperand = false;
+    justEvaluated = false;
+    lastExpression = '';
+    errorState = false;
+    lastOp = null;
+    lastOperand = null;
+    entryLocked = false;
+  }
+
+  function clearAll() {
+    hardReset();
+    update();
+  }
+
+  function clearEntry() {
+    if (errorState) { clearAll(); return; }
+    displayValue = '0';
+    waitingForOperand = false;
+    justEvaluated = false;
+    update();
+  }
+
+  /* ================= 内存 ================= */
+  function memoryStore() {
+    if (errorState) return;
+    memory = parseFloat(displayValue) || 0;
+    hasMemory = true;
+    justEvaluated = false;
+    entryLocked = true;
+    updateMemButtons();
+  }
+  function memoryRecall() {
+    if (!hasMemory) return;
+    if (errorState) hardReset();
+    displayValue = formatNumber(memory);
+    waitingForOperand = false;
+    justEvaluated = false;
+    update();
+  }
+  function memoryClear() {
+    memory = 0;
+    hasMemory = false;
+    updateMemButtons();
+  }
+  function memoryAdd(sign) {
+    if (errorState) return;
+    memory = (hasMemory ? memory : 0) + sign * (parseFloat(displayValue) || 0);
+    hasMemory = true;
+    justEvaluated = false;
+    entryLocked = true;
+    updateMemButtons();
+  }
+
+  /* ================= 历史记录 ================= */
+  function pushHistory(expr, result) {
+    history.unshift({ expr, result });
+    if (history.length > 60) history.pop();
+    renderHistory();
+  }
+
+  function renderHistory() {
+    if (history.length === 0) {
+      historyList.innerHTML = '<div class="empty">暂无历史记录</div>';
+      return;
+    }
+    historyList.innerHTML = history.map((h, i) =>
+      '<div class="h-item" data-i="' + i + '">' +
+        '<div class="h-expr">' + escapeHtml(h.expr) + '</div>' +
+        '<div class="h-res">' + escapeHtml(h.result) + '</div>' +
+      '</div>'
+    ).join('');
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function openHistory() { historyPanel.classList.add('open'); }
+  function closeHistory() { historyPanel.classList.remove('open'); }
+  function clearHistory() { history = []; renderHistory(); }
+
+  /* ================= 主题 ================= */
+  function applyTheme(dark) {
+    document.body.classList.toggle('dark', dark);
+    themeBtn.textContent = dark ? '☀️' : '🌙';
+    try { localStorage.setItem('calc-theme', dark ? 'dark' : 'light'); } catch (e) {}
+  }
+
+  function toggleTheme() {
+    applyTheme(!document.body.classList.contains('dark'));
+  }
+
+  (function initTheme() {
+    let saved = null;
+    try { saved = localStorage.getItem('calc-theme'); } catch (e) {}
+    if (saved === 'dark') applyTheme(true);
+    else if (saved === 'light') applyTheme(false);
+    else applyTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  })();
+
+  /* ================= 事件分发 ================= */
+  function doAction(act) {
+    switch (act) {
+      case 'ce': clearEntry(); break;
+      case 'clear': clearAll(); break;
+      case 'back': backspace(); break;
+      case 'percent': unary('percent'); break;
+      case 'recip': unary('recip'); break;
+      case 'sqr': unary('sqr'); break;
+      case 'sqrt': unary('sqrt'); break;
+      case 'negate': unary('negate'); break;
+      case 'dot': inputDot(); break;
+      case 'equals': equals(); break;
+      case 'mc': memoryClear(); break;
+      case 'mr': memoryRecall(); break;
+      case 'mplus': memoryAdd(1); break;
+      case 'mminus': memoryAdd(-1); break;
+      case 'ms': memoryStore(); break;
+      case 'theme': toggleTheme(); break;
+      case 'toggleHistory': openHistory(); break;
+      case 'closeHistory': closeHistory(); break;
+      case 'clearHistory': clearHistory(); break;
+    }
+  }
+
+  app.addEventListener('click', function (e) {
+    const btn = e.target.closest('button');
+    if (!btn || btn.disabled) return;
+    const d = btn.dataset;
+    if (d.num !== undefined) inputDigit(d.num);
+    else if (d.op !== undefined) chooseOperator(d.op);
+    else if (d.act) doAction(d.act);
+  });
+
+  historyList.addEventListener('click', function (e) {
+    const item = e.target.closest('.h-item');
+    if (!item) return;
+    const h = history[+item.dataset.i];
+    if (!h) return;
+    if (errorState) hardReset();
+    displayValue = h.result;
+    tokens = [];
+    waitingForOperand = false;
+    justEvaluated = true;
+    lastExpression = h.expr;
+    errorState = false;
+    update();
+    closeHistory();
+  });
+
+  /* ================= 键盘支持 ================= */
+  document.addEventListener('keydown', function (e) {
+    const k = e.key;
+    if (k >= '0' && k <= '9') { inputDigit(k); e.preventDefault(); return; }
+    if (k === '.' || k === ',') { inputDot(); e.preventDefault(); return; }
+    if (k === '+') { chooseOperator('+'); e.preventDefault(); return; }
+    if (k === '-') { chooseOperator('-'); e.preventDefault(); return; }
+    if (k === '*' || k === 'x' || k === 'X') { chooseOperator('×'); e.preventDefault(); return; }
+    if (k === '/') { chooseOperator('÷'); e.preventDefault(); return; }
+    if (k === 'Enter' || k === '=') { equals(); e.preventDefault(); return; }
+    if (k === 'Backspace') { backspace(); e.preventDefault(); return; }
+    if (k === 'Escape') { clearAll(); e.preventDefault(); return; }
+    if (k === 'Delete') { clearEntry(); e.preventDefault(); return; }
+    if (k === '%') { unary('percent'); e.preventDefault(); return; }
+    if (k === 'F9') { unary('negate'); e.preventDefault(); return; }
+  });
+
+  /* ================= 启动 ================= */
+  updateMemButtons();
+  renderHistory();
+  update();
+})();
+</script>
+</body>
+</html>
